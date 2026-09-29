@@ -608,6 +608,7 @@ void Watopoly::trade(string name, string give, string receive)
                             cur_player->addMoney(-gm);
                             theplayers[i]->addMoney(gm);
                             cur_player->addProperty(theplayers[i]->getProperty(receive));
+                            theplayers[i]->getProperty(receive)->setOwner(cur_player);
                             theplayers[i]->removeProperty(receive);
                             cout << "You have traded $" << gm << " for " << receive << " with " << name << endl;
                             return;
@@ -655,6 +656,7 @@ void Watopoly::trade(string name, string give, string receive)
                             cur_player->addMoney(rm);
                             theplayers[i]->addMoney(-rm);
                             theplayers[i]->addProperty(cur_player->getProperty(give));
+                            cur_player->getProperty(give)->setOwner(theplayers[i]);
                             cur_player->removeProperty(give);
                             cout << "You have traded " << give << " for $" << rm << " with " << name << endl;
                             return;
@@ -700,7 +702,9 @@ void Watopoly::trade(string name, string give, string receive)
                         else if (s == "accept")
                         {
                             cur_player->addProperty(theplayers[i]->getProperty(receive));
+                            theplayers[i]->getProperty(receive)->setOwner(cur_player);
                             theplayers[i]->addProperty(cur_player->getProperty(give));
+                            cur_player->getProperty(give)->setOwner(theplayers[i]);
                             cur_player->removeProperty(give);
                             theplayers[i]->removeProperty(receive);
                             cout << "You have traded " << give << " for " << receive << " with " << name << endl;
@@ -776,6 +780,11 @@ void Watopoly::unmortgagebuilding(string name, std::shared_ptr<Player> p)
     {
         if (thebuildings[i]->getName() == name)
         {
+            if (!thebuildings[i]->getOwner())
+            {
+                cout << "This building is not purchased yet" << endl;
+                return;
+            }
             string owner = thebuildings[i]->getOwner()->getname();
             if (owner == p->getname())
             {

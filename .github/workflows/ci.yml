@@ -1,28 +1,31 @@
 name: C++ checks
-
-on:
-  push:
-  pull_request:
-
+on: [push, pull_request]
 permissions:
   contents: read
-
 jobs:
-  build:
-    runs-on: ubuntu-24.04
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Archive the exact source under review
-        run: git archive --format=tar.gz --output=source.tar.gz HEAD
-      - name: Build
+      - name: Build game
         run: make -C Watopoly -j2
-      - name: Regression tests
-        run: |
-          if [ -f tests/Makefile ]; then make -C tests test; fi
-      - name: Upload source snapshot
+      - name: Run regression tests
+        run: make -C tests test
+      - name: Retain source and test evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        run: |
+          git archive --format=tar.gz --output=source.tar.gz HEAD
+          (cd tests && python3 run_tests.py) > test-results.txt 2>&1 || true
+      - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: watopoly-source
-          path: source.tar.gz
-          retention-days: 1
+          name: watopoly-${{ matrix.os }}
+          path: |
+            source.tar.gz
+            test-results.txt
+          retention-days: 7

@@ -1,0 +1,9 @@
+*.o
+*.d
+Watopoly/watopoly
+tests/regression
+tests/test-save.txt
+tests/invalid-save.txt
+__pycache__/
+.DS_Store
+.env

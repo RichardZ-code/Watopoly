@@ -9,6 +9,8 @@ Residence::Residence(string name, int purchase_price) : Property{name, purchase_
 void Residence::action(Player & p) {
     cout << "You arrived at " << name << endl;
     
+    if (!owner || getMortgaged()) return;
+
     if(owner->getname() == p.getname()) {
         cout << "You own this property" << endl;
         return;

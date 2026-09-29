@@ -9,6 +9,8 @@ Gym::Gym(string name, int purchase_price) : Property{name, purchase_price} {}
 void Gym::action(Player & p) {
     cout << "You arrived at " << name << endl;
 
+    if (!owner || getMortgaged()) return;
+
     if(owner->getname() == p.getname()) {
         cout << "You own this property" << endl;
         return;

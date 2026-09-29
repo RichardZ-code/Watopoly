@@ -120,9 +120,8 @@ bool Watopoly::load(std::string f)
         cout << "File not found" << endl;
         return false;
     }
-    int n;
-    file >> n;
-    if ((n < 0) || (n > 7))
+    int n = 0;
+    if (!(file >> n) || n < 1 || n > 7)
     {
         cout << "Invalid Player number " << endl;
         return false;
@@ -550,15 +549,23 @@ bool Watopoly::improvable(string name, std::shared_ptr<Player> p)
 
 void Watopoly::trade(string name, string give, string receive)
 {
+    if (!cur_player || name == cur_player->getname() || give.empty() || receive.empty()) {
+        cout << "Invalid trade" << endl;
+        return;
+    }
     char g;
     char r;
-    int gm;
-    int rm;
+    int gm = 0;
+    int rm = 0;
 
     if ('0' <= give[0] && give[0] <= '9')
     {
         stringstream ss{give};
-        ss >> gm;
+        char extra;
+        if (!(ss >> gm) || (ss >> extra) || gm <= 0) {
+            cout << "Invalid trade amount" << endl;
+            return;
+        }
         g = 'M';
     }
     else
@@ -569,7 +576,11 @@ void Watopoly::trade(string name, string give, string receive)
     if ('0' <= receive[0] && receive[0] <= '9')
     {
         stringstream ss{receive};
-        ss >> rm;
+        char extra;
+        if (!(ss >> rm) || (ss >> extra) || rm <= 0) {
+            cout << "Invalid trade amount" << endl;
+            return;
+        }
         r = 'M';
     }
     else
@@ -607,6 +618,7 @@ void Watopoly::trade(string name, string give, string receive)
                         {
                             cur_player->addMoney(-gm);
                             theplayers[i]->addMoney(gm);
+                            theplayers[i]->getProperty(receive)->setOwner(cur_player);
                             cur_player->addProperty(theplayers[i]->getProperty(receive));
                             theplayers[i]->removeProperty(receive);
                             cout << "You have traded $" << gm << " for " << receive << " with " << name << endl;
@@ -654,6 +666,7 @@ void Watopoly::trade(string name, string give, string receive)
                         {
                             cur_player->addMoney(rm);
                             theplayers[i]->addMoney(-rm);
+                            cur_player->getProperty(give)->setOwner(theplayers[i]);
                             theplayers[i]->addProperty(cur_player->getProperty(give));
                             cur_player->removeProperty(give);
                             cout << "You have traded " << give << " for $" << rm << " with " << name << endl;
@@ -699,7 +712,9 @@ void Watopoly::trade(string name, string give, string receive)
                         }
                         else if (s == "accept")
                         {
+                            theplayers[i]->getProperty(receive)->setOwner(cur_player);
                             cur_player->addProperty(theplayers[i]->getProperty(receive));
+                            cur_player->getProperty(give)->setOwner(theplayers[i]);
                             theplayers[i]->addProperty(cur_player->getProperty(give));
                             cur_player->removeProperty(give);
                             theplayers[i]->removeProperty(receive);
@@ -776,6 +791,10 @@ void Watopoly::unmortgagebuilding(string name, std::shared_ptr<Player> p)
     {
         if (thebuildings[i]->getName() == name)
         {
+            if (!p || !thebuildings[i]->getOwner()) {
+                cout << "This building is not owned" << endl;
+                return;
+            }
             string owner = thebuildings[i]->getOwner()->getname();
             if (owner == p->getname())
             {

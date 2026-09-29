@@ -194,10 +194,10 @@ int Player::getGymNum()
 
 void Player::move(int num)
 {
-    pos += num;
-    if (pos > 39)
+    const long long destination = static_cast<long long>(pos) + num;
+    pos = static_cast<int>((destination % 40 + 40) % 40);
+    if (destination >= 40 && num > 0)
     {
-        pos %= 40;
         if (sentToTim == false)
             cash += 200;
     }
@@ -285,7 +285,9 @@ int Player::netWorth()
     for (int i = 0; i < n; i++)
     {
         ans += properties[i]->getPurchasePrice();
-        ans += properties[i]->getImproveLevel() * properties[i]->getImproveCost();
+        const int level = properties[i]->getImproveLevel();
+        const int cost = properties[i]->getImproveCost();
+        if (level > 0 && cost > 0) ans += level * cost;
         // check if need to add mortgage price
     }
     return ans;

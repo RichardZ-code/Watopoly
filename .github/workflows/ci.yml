@@ -8,21 +8,16 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    runs-on: ubuntu-24.04
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Archive the exact source under review
-        run: git archive --format=tar.gz --output=source.tar.gz HEAD
-      - name: Build
+      - name: Build application
         run: make -C Watopoly -j2
-      - name: Regression tests
-        run: |
-          if [ -f tests/Makefile ]; then make -C tests test; fi
-      - name: Upload source snapshot
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: watopoly-source
-          path: source.tar.gz
-          retention-days: 1
+      - name: Regression tests with undefined-behavior checks
+        run: make -C tests test CXXFLAGS='-std=c++14 -g -Wall -Wextra -fsanitize=undefined -fno-sanitize-recover=all'

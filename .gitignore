@@ -1,0 +1,6 @@
+*.o
+*.d
+Watopoly/watopoly
+tests/regression
+tests/.roundtrip.tmp
+.DS_Store

@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <stdexcept>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -53,8 +55,21 @@ void Player::addMoney(int amount)
 
 void Player::addProperty(std::shared_ptr<Building> b)
 {
-    properties.emplace_back(b);
-} // add property to player's property list
+    if (!b || b->getType() != 'P') {
+        throw std::invalid_argument("Only a property can be added to a player");
+    }
+    // Players are shared-owned by Watopoly. Obtain that existing control block;
+    // never construct a new shared_ptr from this.
+    auto self = shared_from_this();
+    auto previous_owner = b->getOwner();
+    if (std::find(properties.begin(), properties.end(), b) == properties.end()) {
+        properties.emplace_back(b);
+    }
+    if (previous_owner && previous_owner != self) {
+        previous_owner->removeProperty(b->getName());
+    }
+    b->setOwner(self);
+} // acquisition keeps the owner and player inventories consistent
 
 void Player::adddebt(string name, int amount)
 {

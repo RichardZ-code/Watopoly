@@ -7,7 +7,9 @@ EXEC = watopoly
 ${EXEC} : ${OBJECTS}
 	${CXX} ${CXXFLAGS} ${OBJECTS} -o ${EXEC}
 
+.PHONY: clean
+
 clean :
-	rm ${DEPENDS} ${OBJECTS} ${EXEC}
+	rm -f ${DEPENDS} ${OBJECTS} ${EXEC}
 
 -include ${DEPENDS} # reads the .d files and reruns dependencies

@@ -12,7 +12,7 @@ struct creditor
     int amount;
 };
 
-class Player
+class Player : public std::enable_shared_from_this<Player>
 {
 private:
     std::vector<std::shared_ptr<Building>> properties;

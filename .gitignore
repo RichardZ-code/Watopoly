@@ -1,0 +1,6 @@
+*.o
+*.d
+Watopoly/watopoly
+tests/regressions
+test-trade-save.txt
+.DS_Store

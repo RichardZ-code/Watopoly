@@ -4,7 +4,7 @@
 using namespace std;
 
 Academic::Academic(string name, string monopoly_block, int purchase_price, int improvement_cost, int im0, int im1, int im2, int im3, int im4, int im5) : 
-    Property{name, purchase_price}, improvement_cost{improvement_cost}, monopoly_block{monopoly_block} {
+    Property{name, purchase_price}, improvement_level{0}, improvement_cost{improvement_cost}, monopoly_block{monopoly_block} {
     improvement_tuition[0] = im0;
     improvement_tuition[1] = im1;
     improvement_tuition[2] = im2;
@@ -35,26 +35,19 @@ void Academic::action(Player & p){
     }
 }
 
-bool Academic::improve(bool bs, int cash){
-    if((bs) && (cash > improvement_cost) ){
-        if(improvement_level < 5){
-            improvement_level++;
-            return true;
-        }
-        else{
-            cout << "Improvement level cannot exceed 5" << endl;
+bool Academic::improve(bool buy, int cash){
+    if (buy) {
+        if (getMortgaged() || cash < improvement_cost || improvement_level >= 5) {
             return false;
         }
-    } else {
-        if(improvement_level > 0){
-            improvement_level--;
-            return true;
-        }
-        else{
-            cout << "Improvement level cannot be less than 0" << endl;
-            return false;
-        }
+        ++improvement_level;
+        return true;
     }
+    if (improvement_level <= 0) {
+        return false;
+    }
+    --improvement_level;
+    return true;
 }
 
 int Academic::getImproveLevel(){
@@ -62,6 +55,9 @@ int Academic::getImproveLevel(){
 }
 
 int Academic::getTuition(){
+    if (!owner || getMortgaged()) {
+        return 0;
+    }
     if(owner->checkMonopoly(monopoly_block) && improvement_level == 0){
         return improvement_tuition[improvement_level] * 2;
     } else {

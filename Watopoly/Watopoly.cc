@@ -4,6 +4,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <limits>
 using namespace std;
 
 // Watopoly::~Watopoly(){
@@ -121,8 +122,7 @@ bool Watopoly::load(std::string f)
         return false;
     }
     int n;
-    file >> n;
-    if ((n < 0) || (n > 7))
+    if (!(file >> n) || n < 1 || n > 7)
     {
         cout << "Invalid Player number " << endl;
         return false;
@@ -550,182 +550,73 @@ bool Watopoly::improvable(string name, std::shared_ptr<Player> p)
 
 void Watopoly::trade(string name, string give, string receive)
 {
-    char g;
-    char r;
-    int gm;
-    int rm;
-
-    if ('0' <= give[0] && give[0] <= '9')
-    {
-        stringstream ss{give};
-        ss >> gm;
-        g = 'M';
+    if (!cur_player || give.empty() || receive.empty()) {
+        cout << "Invalid trade" << endl;
+        return;
     }
-    else
-    {
-        g = 'P';
+    std::shared_ptr<Player> other;
+    for (const auto &player : theplayers) {
+        if (player->getname() == name) { other = player; break; }
     }
-
-    if ('0' <= receive[0] && receive[0] <= '9')
-    {
-        stringstream ss{receive};
-        ss >> rm;
-        r = 'M';
-    }
-    else
-    {
-        r = 'P';
-    }
-
-    if ((g == 'M') && (r == 'M'))
-    {
-        cout << "You can't trade money for money" << endl;
+    if (!other || other == cur_player) {
+        cout << "Trade requires a different existing player" << endl;
         return;
     }
 
-    int n = theplayers.size();
+    const bool give_money = give[0] >= '0' && give[0] <= '9';
+    const bool receive_money = receive[0] >= '0' && receive[0] <= '9';
+    if (give_money && receive_money) {
+        cout << "You can't trade money for money" << endl;
+        return;
+    }
+    auto parse_money = [](const string &text, int &value) {
+        std::istringstream input(text);
+        if (!(input >> value) || value < 0) return false;
+        input >> std::ws;
+        return input.eof();
+    };
+    int give_amount = 0, receive_amount = 0;
+    if ((give_money && !parse_money(give, give_amount)) ||
+        (receive_money && !parse_money(receive, receive_amount))) {
+        cout << "Invalid money amount" << endl;
+        return;
+    }
+    auto give_property = give_money ? nullptr : cur_player->getProperty(give);
+    auto receive_property = receive_money ? nullptr : other->getProperty(receive);
+    if ((!give_money && (!give_property || give_property->getOwner() != cur_player)) ||
+        (!receive_money && (!receive_property || receive_property->getOwner() != other))) {
+        cout << "Trade property is not owned by the specified player" << endl;
+        return;
+    }
+    if (cur_player->getCashAmount() < give_amount || other->getCashAmount() < receive_amount ||
+        (give_money && other->getCashAmount() > std::numeric_limits<int>::max() - give_amount) ||
+        (receive_money && cur_player->getCashAmount() > std::numeric_limits<int>::max() - receive_amount)) {
+        cout << "Invalid trade balance" << endl;
+        return;
+    }
+    cout << "Player " << name << " do you accept this trade? Please enter 'accept' or 'reject' " << endl;
+    string answer;
+    if (!(cin >> answer) || answer != "accept") {
+        cout << "Trade not accepted" << endl;
+        return;
+    }
 
-    if ((g == 'M') && (r == 'P'))
-    {
-        for (int i = 0; i < n; i++)
-        {
-            if (theplayers[i]->getname() == name)
-            {
-                if (theplayers[i]->checkProperty(receive))
-                {
-                    if (cur_player->getCashAmount() >= gm)
-                    {
-                        cout << "Player " << name << " do you accept this trade? Please enter 'accept' or 'reject' " << endl;
-                        string s;
-                        cin >> s;
-                        if (s == "reject")
-                        {
-                            cout << "Player " << name << " has rejected this trade" << endl;
-                            return;
-                        }
-                        else if (s == "accept")
-                        {
-                            cur_player->addMoney(-gm);
-                            theplayers[i]->addMoney(gm);
-                            cur_player->addProperty(theplayers[i]->getProperty(receive));
-                            theplayers[i]->removeProperty(receive);
-                            cout << "You have traded $" << gm << " for " << receive << " with " << name << endl;
-                            return;
-                        }
-                        else
-                        {
-                            cout << "Invalid input" << endl;
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        cout << "You don't have enough money to trade" << endl;
-                        return;
-                    }
-                }
-                else
-                {
-                    cout << "This player doesn't have this property" << endl;
-                    return;
-                }
-            }
-        }
+    // Reserve before mutation so list growth cannot leave a half-applied trade.
+    cur_player->getProperties().reserve(cur_player->getProperties().size() + (receive_property ? 1 : 0));
+    other->getProperties().reserve(other->getProperties().size() + (give_property ? 1 : 0));
+    if (give_property) {
+        other->addProperty(give_property);
+        cur_player->removeProperty(give);
+        give_property->setOwner(other);
     }
-    else if ((g == 'P') && (r == 'M'))
-    {
-        for (int i = 0; i < n; i++)
-        {
-            if (theplayers[i]->getname() == name)
-            {
-                if (cur_player->checkProperty(give))
-                {
-                    if (theplayers[i]->getCashAmount() >= rm)
-                    {
-                        cout << "Player " << name << " do you accept this trade? Please enter 'accept' or 'reject' " << endl;
-                        string s;
-                        cin >> s;
-                        if (s == "reject")
-                        {
-                            cout << "Player " << name << " has rejected this trade" << endl;
-                            return;
-                        }
-                        else if (s == "accept")
-                        {
-                            cur_player->addMoney(rm);
-                            theplayers[i]->addMoney(-rm);
-                            theplayers[i]->addProperty(cur_player->getProperty(give));
-                            cur_player->removeProperty(give);
-                            cout << "You have traded " << give << " for $" << rm << " with " << name << endl;
-                            return;
-                        }
-                        else
-                        {
-                            cout << "Invalid input" << endl;
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        cout << "This player doesn't have enough money to trade" << endl;
-                        return;
-                    }
-                }
-                else
-                {
-                    cout << "You don't have this property" << endl;
-                    return;
-                }
-            }
-        }
+    if (receive_property) {
+        cur_player->addProperty(receive_property);
+        other->removeProperty(receive);
+        receive_property->setOwner(cur_player);
     }
-    else if ((g == 'P') && (r == 'P'))
-    {
-        for (int i = 0; i < n; i++)
-        {
-            if (theplayers[i]->getname() == name)
-            {
-                if (cur_player->checkProperty(give))
-                {
-                    if (theplayers[i]->checkProperty(receive))
-                    {
-                        cout << "Player " << name << " do you accept this trade? Please enter 'accept' or 'reject' " << endl;
-                        string s;
-                        cin >> s;
-                        if (s == "reject")
-                        {
-                            cout << "Player " << name << " has rejected this trade" << endl;
-                            return;
-                        }
-                        else if (s == "accept")
-                        {
-                            cur_player->addProperty(theplayers[i]->getProperty(receive));
-                            theplayers[i]->addProperty(cur_player->getProperty(give));
-                            cur_player->removeProperty(give);
-                            theplayers[i]->removeProperty(receive);
-                            cout << "You have traded " << give << " for " << receive << " with " << name << endl;
-                            return;
-                        }
-                        else
-                        {
-                            cout << "Invalid input" << endl;
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        cout << "This player doesn't have this property" << endl;
-                        return;
-                    }
-                }
-                else
-                {
-                    cout << "You don't have this property" << endl;
-                    return;
-                }
-            }
-        }
-    }
+    cur_player->addMoney(receive_amount - give_amount);
+    other->addMoney(give_amount - receive_amount);
+    cout << "You have traded " << give << " for " << receive << " with " << name << endl;
 }
 
 void Watopoly::mortgagebuilding(string name, std::shared_ptr<Player> p)
@@ -776,6 +667,10 @@ void Watopoly::unmortgagebuilding(string name, std::shared_ptr<Player> p)
     {
         if (thebuildings[i]->getName() == name)
         {
+            if (!p || !thebuildings[i]->getOwner()) {
+                cout << "This building has no owner" << endl;
+                return;
+            }
             string owner = thebuildings[i]->getOwner()->getname();
             if (owner == p->getname())
             {
